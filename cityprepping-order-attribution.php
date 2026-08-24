@@ -2,7 +2,7 @@
 /**
  * Plugin Name: City Prepping Order Attribution
  * Description: Saves attribution URL params to WooCommerce order meta using last-touch attribution, shows attribution in the order admin, and adds sortable order list columns.
- * Version: 1.6.0
+ * Version: 1.7.0
  */
 
 if (!defined('ABSPATH')) {
@@ -79,6 +79,13 @@ add_action('init', function () {
         cp_set_tracking_cookie('cp_slid', $cp_slid);
     }
 
+    // Persist redirect dimensions with the same last-touch attribution.
+    foreach (['cp_channel_variant', 'cp_placement_label'] as $param) {
+        if (!empty($_GET[$param])) {
+            cp_set_tracking_cookie($param, sanitize_text_field(wp_unslash($_GET[$param])));
+        }
+    }
+
     // Keep source-specific identifiers mutually exclusive.
     if ('kit' === $cp_from) {
         if (!empty($_GET['cp_email_id'])) {
@@ -104,12 +111,39 @@ add_action('init', function () {
 });
 
 /**
+ * Mirror redirect dimensions into localStorage for browser-side checkout flows.
+ * The cookies remain the server-side source of truth for order creation.
+ */
+add_action('wp_footer', function () {
+    ?>
+    <script>
+    (function () {
+        ['cp_channel_variant', 'cp_placement_label'].forEach(function (key) {
+            var value = new URLSearchParams(window.location.search).get(key);
+            if (!value) {
+                return;
+            }
+
+            try {
+                window.localStorage.setItem(key, value);
+            } catch (error) {}
+
+            document.cookie = key + '=' + encodeURIComponent(value) + '; path=/; max-age=2592000' + (window.location.protocol === 'https:' ? '; secure' : '');
+        });
+    }());
+    </script>
+    <?php
+});
+
+/**
  * Save cookie values to the WooCommerce order when the order is created.
  * Only saves the source-specific field that matches the current cp_from value.
  */
 add_action('woocommerce_checkout_create_order', function ($order, $data) {
     $cp_from = !empty($_COOKIE['cp_from']) ? sanitize_key(wp_unslash($_COOKIE['cp_from'])) : '';
     $cp_slid = !empty($_COOKIE['cp_slid']) ? sanitize_text_field(wp_unslash($_COOKIE['cp_slid'])) : '';
+    $cp_channel_variant = !empty($_COOKIE['cp_channel_variant']) ? sanitize_text_field(wp_unslash($_COOKIE['cp_channel_variant'])) : '';
+    $cp_placement_label = !empty($_COOKIE['cp_placement_label']) ? sanitize_text_field(wp_unslash($_COOKIE['cp_placement_label'])) : '';
 
     if ($cp_from) {
         $allowed_sources = cp_get_allowed_sources();
@@ -121,6 +155,14 @@ add_action('woocommerce_checkout_create_order', function ($order, $data) {
 
     if ($cp_slid) {
         $order->update_meta_data('_cp_slid', $cp_slid);
+    }
+
+    if ($cp_channel_variant) {
+        $order->update_meta_data('_cp_channel_variant', $cp_channel_variant);
+    }
+
+    if ($cp_placement_label) {
+        $order->update_meta_data('_cp_placement_label', $cp_placement_label);
     }
 
     if ('kit' === $cp_from && !empty($_COOKIE['cp_email_id'])) {
@@ -143,6 +185,8 @@ add_action('woocommerce_admin_order_data_after_order_details', function ($order)
     $cp_slid = $order->get_meta('_cp_slid');
     $cp_email_id = $order->get_meta('_cp_email_id');
     $cp_youtube_id = $order->get_meta('_cp_youtube_id');
+    $cp_channel_variant = $order->get_meta('_cp_channel_variant');
+    $cp_placement_label = $order->get_meta('_cp_placement_label');
 
     echo '<div style="padding:12px 0;">';
     echo '<h3 style="margin:0 0 8px;">Attribution</h3>';
@@ -150,6 +194,8 @@ add_action('woocommerce_admin_order_data_after_order_details', function ($order)
     echo '<p><strong>Short Link ID:</strong> ' . ($cp_slid ? esc_html($cp_slid) : '<em>Not set</em>') . '</p>';
     echo '<p><strong>Email ID:</strong> ' . ($cp_email_id ? esc_html($cp_email_id) : '<em>Not set</em>') . '</p>';
     echo '<p><strong>YouTube ID:</strong> ' . ($cp_youtube_id ? esc_html($cp_youtube_id) : '<em>Not set</em>') . '</p>';
+    echo '<p><strong>Channel Variant:</strong> ' . ($cp_channel_variant ? esc_html($cp_channel_variant) : '<em>Not set</em>') . '</p>';
+    echo '<p><strong>Placement Label:</strong> ' . ($cp_placement_label ? esc_html($cp_placement_label) : '<em>Not set</em>') . '</p>';
     echo '</div>';
 });
 
