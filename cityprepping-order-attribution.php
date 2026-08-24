@@ -70,19 +70,33 @@ add_action('init', function () {
         return;
     }
 
-    // Always update the canonical source.
-    cp_set_tracking_cookie('cp_from', $cp_from);
+    // Reset the complete previous attribution touch first.
+    $tracking_keys = [
+        'cp_from',
+        'cp_slid',
+        'cp_email_id',
+        'cp_youtube_id',
+        'cp_channel_variant',
+        'cp_placement_label',
+    ];
 
-    // Update shared short link ID if present.
-    if (!empty($_GET['cp_slid'])) {
-        $cp_slid = sanitize_text_field(wp_unslash($_GET['cp_slid']));
-        cp_set_tracking_cookie('cp_slid', $cp_slid);
+    foreach ($tracking_keys as $key) {
+        cp_clear_tracking_cookie($key);
     }
 
-    // Persist redirect dimensions with the same last-touch attribution.
-    foreach (['cp_channel_variant', 'cp_placement_label'] as $param) {
+    // Store only values supplied by the new touch.
+    cp_set_tracking_cookie('cp_from', $cp_from);
+
+    foreach ([
+        'cp_slid',
+        'cp_channel_variant',
+        'cp_placement_label',
+    ] as $param) {
         if (!empty($_GET[$param])) {
-            cp_set_tracking_cookie($param, sanitize_text_field(wp_unslash($_GET[$param])));
+            cp_set_tracking_cookie(
+                $param,
+                sanitize_text_field(wp_unslash($_GET[$param]))
+            );
         }
     }
 

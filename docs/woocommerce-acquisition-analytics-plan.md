@@ -20,10 +20,11 @@ Agreed product decisions:
 
 ## 1. WordPress plugin: attribution capture
 
-- [ ] Preserve the checkout hook that copies tracking cookies into WooCommerce order metadata.
-- [ ] Preserve the wp-admin Attribution block and existing order-list columns.
-- [ ] Clear `cp_slid` when a new valid attributed touch does not include a Short Link ID, preventing a stale link from being paired with a newer source.
-- [ ] Continue clearing mutually exclusive Kit and YouTube identifiers when the source changes.
+- [x] Preserve the checkout hook that copies tracking cookies into WooCommerce order metadata.
+- [x] Preserve the wp-admin Attribution block and existing order-list columns.
+- [x] Clear the complete previous attribution set when a new valid touch is received before writing new values.
+- [x] Clear `cp_slid`, `cp_channel_variant`, and `cp_placement_label` when the new touch does not include them.
+- [x] Continue clearing mutually exclusive Kit and YouTube identifiers when the source changes.
 - [ ] Store the time of the last valid attributed touch in a 30-day cookie.
 - [ ] Copy that timestamp to `_cp_attributed_at` when the order is created.
 - [ ] Confirm cookie behavior under HTTPS, consent tooling, classic checkout, and block checkout.
@@ -47,12 +48,13 @@ Agreed product decisions:
   - Refund total.
   - Net charged total after refunds.
   - Net merchandise revenue after discounts and item refunds, excluding tax and shipping.
-- [ ] Handle partial, full, item-level, and unallocated refunds deterministically.
 - [ ] Read the following custom attribution fields from order metadata:
   - `_cp_from`
   - `_cp_slid`
   - `_cp_email_id`
   - `_cp_youtube_id`
+  - `_cp_channel_variant`
+  - `_cp_placement_label`
   - `_cp_attributed_at`
 - [ ] Read the following WooCommerce native attribution fields:
   - Source type
@@ -92,7 +94,9 @@ Agreed product decisions:
     "utm_source": "youtube",
     "utm_medium": "video",
     "utm_campaign": "august-launch",
-    "device_type": "mobile"
+    "device_type": "mobile",
+    "channel_variant": "...",
+    "placement_label": "..."
   }
 }
 ```
