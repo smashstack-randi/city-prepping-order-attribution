@@ -2,12 +2,17 @@
 /**
  * Plugin Name: City Prepping Order Attribution
  * Description: Saves attribution URL params to WooCommerce order meta using last-touch attribution, shows attribution in the order admin, and adds sortable order list columns.
- * Version: 1.7.1
+ * Version: 1.7.2
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
+
+require_once plugin_dir_path(__FILE__) . 'includes/class-cp-settings.php';
+
+CP_Order_Attribution_Settings::register();
+register_activation_hook(__FILE__, ['CP_Order_Attribution_Settings', 'activate']);
 
 /**
  * Allowed sources for cp_from. Currently supporting kit and youtube since those are the only channels we have active campaigns for, but this can be easily extended in the future as needed.
