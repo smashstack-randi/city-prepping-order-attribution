@@ -33,6 +33,7 @@ final class CP_Order_Attribution_Settings {
             'signature_verification_mode' => 'disabled',
             'signature_max_age_seconds' => 900,
             'cookie_lifetime_days' => 30,
+            'first_latest_touch_enabled' => false,
             'signing_key_current' => '',
             'signing_key_previous' => '',
         ];
@@ -109,6 +110,7 @@ final class CP_Order_Attribution_Settings {
             'signature_verification_mode' => $mode,
             'signature_max_age_seconds' => min(max($max_age, 60), DAY_IN_SECONDS),
             'cookie_lifetime_days' => min(max($cookie_lifetime, 1), 365),
+            'first_latest_touch_enabled' => !empty($input['first_latest_touch_enabled']),
             'signing_key_current' => $current['signing_key_current'],
             'signing_key_previous' => $current['signing_key_previous'],
         ];
@@ -177,6 +179,13 @@ final class CP_Order_Attribution_Settings {
                     <tr>
                         <th scope="row"><label for="cp-cookie-lifetime">Attribution cookie lifetime (days)</label></th>
                         <td><input id="cp-cookie-lifetime" name="<?php echo esc_attr(self::OPTION_NAME); ?>[cookie_lifetime_days]" type="number" min="1" max="365" value="<?php echo esc_attr($settings['cookie_lifetime_days']); ?>" class="small-text" /></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">First/latest touch state</th>
+                        <td>
+                            <label><input name="<?php echo esc_attr(self::OPTION_NAME); ?>[first_latest_touch_enabled]" type="checkbox" value="1" <?php checked(!empty($settings['first_latest_touch_enabled'])); ?> /> Enable server-owned first/latest attribution snapshots</label>
+                            <p class="description">Leave disabled until signature enforcement and checkout regression checks have passed. When enabled, first touch is immutable, latest touch remains replaceable, and browser-writable attribution mirroring is disabled.</p>
+                        </td>
                     </tr>
                     <tr>
                         <th scope="row"><label for="cp-signing-key-current">Current signing key</label></th>

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: City Prepping Order Attribution
  * Description: Saves attribution URL params to WooCommerce order meta using last-touch attribution, shows attribution in the order admin, and adds sortable order list columns.
- * Version: 1.7.3
+ * Version: 1.7.4
  */
 
 if (!defined('ABSPATH')) {
@@ -11,6 +11,7 @@ if (!defined('ABSPATH')) {
 
 require_once plugin_dir_path(__FILE__) . 'includes/class-cp-settings.php';
 require_once plugin_dir_path(__FILE__) . 'includes/class-cp-attribution-signature.php';
+require_once plugin_dir_path(__FILE__) . 'includes/class-cp-attribution-state.php';
 
 CP_Order_Attribution_Settings::register();
 register_activation_hook(__FILE__, ['CP_Order_Attribution_Settings', 'activate']);
@@ -93,6 +94,11 @@ add_action('init', function () {
         return;
     }
 
+    // When enabled, preserve the first eligible touch and replace only the
+    // latest snapshot. Legacy cp_* cookies below remain latest-touch fields
+    // for backward-compatible checkout and order attribution.
+    CP_Attribution_State::capture(cp_get_tracking_touch_from_request($cp_from));
+
     // Reset the complete previous attribution touch first.
     $tracking_keys = [
         'cp_from',
@@ -152,6 +158,10 @@ add_action('init', function () {
  * The cookies remain the server-side source of truth for order creation.
  */
 add_action('wp_footer', function () {
+    if (CP_Attribution_State::is_enabled()) {
+        return;
+    }
+
     ?>
     <script>
     (function () {
@@ -171,6 +181,29 @@ add_action('wp_footer', function () {
     </script>
     <?php
 });
+
+/**
+ * Build the accepted attribution touch without carrying unrelated source IDs.
+ */
+function cp_get_tracking_touch_from_request($cp_from) {
+    $touch = ['cp_from' => $cp_from];
+
+    foreach (['cp_slid', 'cp_channel_variant', 'cp_placement_label'] as $param) {
+        if (!empty($_GET[$param])) {
+            $touch[$param] = sanitize_text_field(wp_unslash($_GET[$param]));
+        }
+    }
+
+    if ('kit' === $cp_from && !empty($_GET['cp_email_id'])) {
+        $touch['cp_email_id'] = sanitize_text_field(wp_unslash($_GET['cp_email_id']));
+    }
+
+    if ('youtube' === $cp_from && !empty($_GET['cp_youtube_id'])) {
+        $touch['cp_youtube_id'] = sanitize_text_field(wp_unslash($_GET['cp_youtube_id']));
+    }
+
+    return $touch;
+}
 
 /**
  * Save cookie values to the WooCommerce order when the order is created.
