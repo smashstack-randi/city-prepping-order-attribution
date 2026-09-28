@@ -3,8 +3,8 @@
  * Administrative settings for City Prepping Order Attribution.
  *
  * Secrets are encrypted before storage and are never rendered back to the
- * browser. The current and previous signing keys are reserved for the
- * forthcoming signed-attribution verification rollout.
+ * browser. The current and previous signing keys are used solely by the
+ * signed-attribution verifier.
  */
 
 if (!defined('ABSPATH')) {
@@ -195,6 +195,19 @@ final class CP_Order_Attribution_Settings {
                         </td>
                     </tr>
                 </table>
+                <?php if ('disabled' !== $settings['signature_verification_mode']) : ?>
+                    <?php $diagnostics = CP_Attribution_Signature::get_diagnostics(); ?>
+                    <h2>Signature diagnostics</h2>
+                    <p class="description">Aggregate reason-code counts only. No URLs, attribution values, signatures, or keys are retained.</p>
+                    <table class="widefat striped" style="max-width: 520px;">
+                        <thead><tr><th scope="col">Reason</th><th scope="col">Count</th></tr></thead>
+                        <tbody>
+                        <?php foreach (['valid_current', 'valid_previous', 'invalid', 'unsigned', 'expired', 'malformed', 'unverifiable'] as $reason) : ?>
+                            <tr><td><?php echo esc_html($reason); ?></td><td><?php echo esc_html((string) (isset($diagnostics[$reason]) ? (int) $diagnostics[$reason] : 0)); ?></td></tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
                 <?php submit_button('Save attribution settings'); ?>
             </form>
         </div>

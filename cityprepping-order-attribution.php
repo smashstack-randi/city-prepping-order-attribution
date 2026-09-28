@@ -2,7 +2,7 @@
 /**
  * Plugin Name: City Prepping Order Attribution
  * Description: Saves attribution URL params to WooCommerce order meta using last-touch attribution, shows attribution in the order admin, and adds sortable order list columns.
- * Version: 1.7.2
+ * Version: 1.7.3
  */
 
 if (!defined('ABSPATH')) {
@@ -10,6 +10,7 @@ if (!defined('ABSPATH')) {
 }
 
 require_once plugin_dir_path(__FILE__) . 'includes/class-cp-settings.php';
+require_once plugin_dir_path(__FILE__) . 'includes/class-cp-attribution-signature.php';
 
 CP_Order_Attribution_Settings::register();
 register_activation_hook(__FILE__, ['CP_Order_Attribution_Settings', 'activate']);
@@ -81,6 +82,14 @@ add_action('init', function () {
     $allowed_sources = cp_get_allowed_sources();
 
     if (!in_array($cp_from, $allowed_sources, true)) {
+        return;
+    }
+
+    // In audit mode the verifier records only a safe aggregate reason code;
+    // enforcement prevents unsigned or invalid campaign parameters from
+    // clearing or replacing an existing attribution touch.
+    $signature = CP_Attribution_Signature::verify_request();
+    if (!$signature['accept']) {
         return;
     }
 
