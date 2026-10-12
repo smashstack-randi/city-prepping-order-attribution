@@ -294,3 +294,4 @@ wp-config.php
 
 scratch/
 **/*/*.scratch
+**/*.zip
