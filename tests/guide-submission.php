@@ -1,7 +1,7 @@
 <?php
 /** Guide contract and capture isolation. Run: php tests/guide-submission.php */
 define('ABSPATH', __DIR__ . '/');
-define('CP_GUIDE_EVENT_SCOPE', 'staging');
+define('CP_GUIDE_EVENT_SCOPE', 'production'); // Legacy override must be ignored.
 $counter = 0;
 $options = [];
 function add_filter($hook, $callback, $priority, $args) {}
@@ -9,6 +9,7 @@ function wp_generate_uuid4() { global $counter; return sprintf('00000000-0000-40
 function is_email($email) { return filter_var($email, FILTER_VALIDATE_EMAIL); }
 function get_option($key, $default = false) { global $options; return $options[$key] ?? $default; }
 function update_option($key, $value, $autoload = null) { global $options; $options[$key] = $value; }
+function wp_get_environment_type() { return 'staging'; }
 final class CP_Guide_Outbox {
     public static $events = [];
     public static $fail = false;

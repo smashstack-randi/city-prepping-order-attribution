@@ -89,12 +89,7 @@ final class CP_Guide_Outbox {
     }
 
     public static function transport_config() {
-        $url = defined('CP_GUIDE_ANALYTICS_URL') ? CP_GUIDE_ANALYTICS_URL : '';
-        $key = defined('CP_GUIDE_ANALYTICS_SIGNING_KEY') ? CP_GUIDE_ANALYTICS_SIGNING_KEY : '';
-        if (!is_string($url) || !is_string($key) || strlen($key) < 32 || strlen($key) > 512
-            || strpos($url, 'https://') !== 0 || !wp_http_validate_url($url)
-            || wp_parse_url($url, PHP_URL_QUERY) || wp_parse_url($url, PHP_URL_FRAGMENT)) { return null; }
-        return ['url' => $url, 'key' => $key];
+        return CP_Order_Attribution_Settings::get_guide_transport_config();
     }
 
     public static function sign($body, $timestamp, $nonce, $key) {

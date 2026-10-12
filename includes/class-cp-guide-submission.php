@@ -54,7 +54,7 @@ final class CP_Guide_Submission {
             $is_test_capture = self::mode() === 'test_emails_only';
             if ($is_test_capture && !self::is_test_email($email)) { return null; }
             if (!is_string($entry['guide_key']) || !preg_match('/^[a-z0-9-]{1,100}$/D', $entry['guide_key'])) { return null; }
-            $scope = defined('CP_GUIDE_EVENT_SCOPE') ? CP_GUIDE_EVENT_SCOPE : wp_get_environment_type();
+            $scope = wp_get_environment_type();
             if (!in_array($scope, ['local', 'development', 'staging', 'production'], true)) { return null; }
             return [
                 'schema_version' => 1,

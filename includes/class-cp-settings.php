@@ -3,8 +3,8 @@
  * Administrative settings for City Prepping Order Attribution.
  *
  * Secrets are encrypted before storage and are never rendered back to the
- * browser. The current and previous signing keys are used solely by the
- * signed-attribution verifier.
+ * browser. The current and previous campaign keys are used by the attribution
+ * verifier; the dedicated Analytics key is used only by guide outbox delivery.
  */
 
 if (!defined('ABSPATH')) {
@@ -37,6 +37,8 @@ final class CP_Order_Attribution_Settings {
             'subsequent_touch_history_enabled' => false,
             'guide_capture_failure_policy' => 'continue',
             'guide_capture_mode' => 'disabled',
+            'guide_analytics_url' => '',
+            'guide_analytics_signing_key' => '',
             'signing_key_current' => '',
             'signing_key_previous' => '',
         ];
@@ -59,6 +61,21 @@ final class CP_Order_Attribution_Settings {
             'current' => self::decrypt_secret($settings['signing_key_current']),
             'previous' => self::decrypt_secret($settings['signing_key_previous']),
         ];
+    }
+
+    public static function valid_guide_url($url) {
+        return is_string($url) && strlen($url) <= 2048
+            && strpos($url, 'https://') === 0 && wp_http_validate_url($url)
+            && !wp_parse_url($url, PHP_URL_QUERY) && !wp_parse_url($url, PHP_URL_FRAGMENT)
+            && !wp_parse_url($url, PHP_URL_USER) && !wp_parse_url($url, PHP_URL_PASS);
+    }
+
+    /** Plaintext transport key is available only at the server delivery boundary. */
+    public static function get_guide_transport_config() {
+        $settings = self::get();
+        $key = self::decrypt_secret($settings['guide_analytics_signing_key']);
+        if (!self::valid_guide_url($settings['guide_analytics_url']) || strlen($key) < 32 || strlen($key) > 512) { return null; }
+        return ['url' => $settings['guide_analytics_url'], 'key' => $key];
     }
 
     public static function register_settings() {
@@ -116,6 +133,15 @@ final class CP_Order_Attribution_Settings {
         if (!in_array($capture_mode, ['disabled', 'test_emails_only', 'all'], true)) {
             $capture_mode = 'disabled';
         }
+        $analytics_url = $current['guide_analytics_url'];
+        if (array_key_exists('guide_analytics_url', $input)) {
+            $candidate = is_string($input['guide_analytics_url']) ? trim(wp_unslash($input['guide_analytics_url'])) : null;
+            if ($candidate === '' || self::valid_guide_url($candidate)) {
+                $analytics_url = $candidate;
+            } else {
+                add_settings_error(self::OPTION_NAME, 'cp_settings_invalid_analytics_url', 'Analytics URL must be public HTTPS without credentials, query parameters or a fragment. The previous URL was retained.');
+            }
+        }
 
         $settings = [
             'signature_verification_mode' => $mode,
@@ -125,13 +151,14 @@ final class CP_Order_Attribution_Settings {
             'subsequent_touch_history_enabled' => !empty($input['subsequent_touch_history_enabled']),
             'guide_capture_failure_policy' => $failure_policy,
             'guide_capture_mode' => $capture_mode,
+            'guide_analytics_url' => $analytics_url,
+            'guide_analytics_signing_key' => $current['guide_analytics_signing_key'],
             'signing_key_current' => $current['signing_key_current'],
             'signing_key_previous' => $current['signing_key_previous'],
         ];
 
-        foreach (['current', 'previous'] as $slot) {
-            $field = 'signing_key_' . $slot;
-            $replacement = isset($input[$field]) ? trim(wp_unslash($input[$field])) : '';
+        foreach (['signing_key_current' => 'current', 'signing_key_previous' => 'previous', 'guide_analytics_signing_key' => 'analytics'] as $field => $slot) {
+            $replacement = isset($input[$field]) && is_string($input[$field]) ? trim(wp_unslash($input[$field])) : '';
             $clear = !empty($input['clear_' . $field]);
 
             if ($clear) {
@@ -172,6 +199,7 @@ final class CP_Order_Attribution_Settings {
         if (!in_array($guide_failure_policy, ['continue', 'retry_error'], true)) { $guide_failure_policy = 'continue'; }
         $guide_capture_mode = $settings['guide_capture_mode'];
         if (!in_array($guide_capture_mode, ['disabled', 'test_emails_only', 'all'], true)) { $guide_capture_mode = 'disabled'; }
+        $analytics_key_configured = is_string($settings['guide_analytics_signing_key']) && $settings['guide_analytics_signing_key'] !== '';
         ?>
         <div class="wrap">
             <h1>Order Attribution Settings</h1>
@@ -231,6 +259,21 @@ final class CP_Order_Attribution_Settings {
                                 <option value="retry_error" <?php selected($guide_failure_policy, 'retry_error'); ?>>Show a retryable submission error</option>
                             </select>
                             <p class="description">If a guide milestone cannot be saved, continue normal Kit enrollment (default) or stop before enrollment and ask the visitor to retry. Analytics delivery failures after saving are handled by outbox retries. This setting does not enable guide capture.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><label for="cp-guide-analytics-url">Analytics URL</label></th>
+                        <td>
+                            <input id="cp-guide-analytics-url" name="<?php echo esc_attr(self::OPTION_NAME); ?>[guide_analytics_url]" type="url" maxlength="2048" value="<?php echo esc_attr($settings['guide_analytics_url']); ?>" class="regular-text" placeholder="https://analytics.cityprepping.com/api/wordpress/guide-submissions" />
+                            <p class="description">The public HTTPS guide-submission endpoint. Leave capture Disabled until Analytics is deployed and credentials are configured.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><label for="cp-guide-analytics-key">Analytics signing key</label></th>
+                        <td>
+                            <input id="cp-guide-analytics-key" name="<?php echo esc_attr(self::OPTION_NAME); ?>[guide_analytics_signing_key]" type="password" value="" autocomplete="new-password" class="regular-text" />
+                            <p class="description">Status: <?php echo $analytics_key_configured ? 'configured' : 'not configured'; ?>. Use the same dedicated secret as WORDPRESS_GUIDE_SIGNING_KEY in Analytics. The saved key is encrypted and never displayed; leave blank to keep it.</p>
+                            <label><input name="<?php echo esc_attr(self::OPTION_NAME); ?>[clear_guide_analytics_signing_key]" type="checkbox" value="1" /> Clear Analytics signing key</label>
                         </td>
                     </tr>
                     <tr>

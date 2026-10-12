@@ -17,8 +17,11 @@ first/latest snapshots, campaign dimensions, or confirmed-Kit-subscription claim
 
 ## Configuration (server only)
 
-Set transport constants in deployment configuration. No credential is rendered
-in a form or included in JavaScript.
+Since v1.9.1, configure the Analytics URL and Analytics signing key under
+**Settings → Order Attribution**. The key is encrypted at rest using the existing
+settings encryption, never displayed after saving, and used only by server-side
+delivery. Leave its replacement field blank to preserve it; the Clear checkbox
+removes it. Invalid URLs or keys leave the previous valid configuration intact.
 
 Since v1.9.0, **Settings → Order Attribution → Guide capture mode** controls
 capture and delivery. It is the sole activation control; legacy
@@ -46,11 +49,13 @@ The alternative shows a retryable error before native Kit enrollment if outbox
 persistence fails. This setting does not enable guide capture. The saved admin
 setting is the sole policy source; legacy wp-config.php policy constants are ignored.
 
-```php
-define('CP_GUIDE_EVENT_SCOPE', 'staging');
-define('CP_GUIDE_ANALYTICS_URL', 'https://YOUR-ANALYTICS-HOST/api/wordpress/guide-submissions');
-define('CP_GUIDE_ANALYTICS_SIGNING_KEY', 'REPLACE-WITH-A-DEDICATED-SECRET-OF-AT-LEAST-32-CHARACTERS');
-```
+Set **Analytics URL** to the public `/api/wordpress/guide-submissions` endpoint
+and **Analytics signing key** to the same dedicated secret configured as
+`WORDPRESS_GUIDE_SIGNING_KEY` in Analytics. These are the sole transport setting
+sources; legacy `CP_GUIDE_ANALYTICS_URL` and `CP_GUIDE_ANALYTICS_SIGNING_KEY`
+constants are ignored. There is no plugin event-scope setting or override:
+events use `wp_get_environment_type()` automatically. Match that environment
+with the Analytics deployment's accepted scope.
 
 The URL must be public HTTPS without query or fragment. Verify Analytics has
 deployed the endpoint and test-marker support before selecting Test-only. Invalid
@@ -133,6 +138,7 @@ php tests/rejected-attribution.php
 php tests/guide-submission.php
 php tests/guide-submission.php retry_error
 php tests/guide-policy-settings.php
+php tests/guide-transport-settings.php
 php tests/guide-outbox.php
 php tests/guide-feature-off.php
 ```

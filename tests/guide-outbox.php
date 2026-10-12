@@ -29,6 +29,9 @@ final class CP_Guide_Submission {
     public static function mode() { return self::$mode; }
     public static function is_test_email($email) { return is_string($email) && preg_match('/^[^@\s]+@cityprepping\.com$/iD', trim($email)) === 1; }
 }
+final class CP_Order_Attribution_Settings {
+    public static function get_guide_transport_config() { return ['url' => 'https://analytics.example.com/api/wordpress/guide-submissions', 'key' => CP_GUIDE_ANALYTICS_SIGNING_KEY]; }
+}
 final class Outbox_DB {
     public $prefix = 'wp_';
     public $rows = [];
