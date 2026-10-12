@@ -2,7 +2,7 @@
 /**
  * Plugin Name: City Prepping Order Attribution
  * Description: Saves attribution URL params to WooCommerce order meta using last-touch attribution, shows attribution in the order admin, and adds sortable order list columns.
- * Version: 1.7.5
+ * Version: 1.7.7
  */
 
 if (!defined('ABSPATH')) {
@@ -101,7 +101,11 @@ add_action('init', function () {
     // When enabled, preserve the first eligible touch and replace only the
     // latest snapshot. Legacy cp_* cookies below remain latest-touch fields
     // for backward-compatible checkout and order attribution.
-    CP_Attribution_State::capture(cp_get_tracking_touch_from_request($cp_from));
+    $touch = cp_get_tracking_touch_from_request($cp_from);
+    // The footer compatibility mirror may use only this already-verified
+    // request-local touch. It must never read cp_* dimensions from the URL.
+    $GLOBALS['cp_order_attribution_verified_touch'] = $touch;
+    CP_Attribution_State::capture($touch);
 
     // Reset the complete previous attribution touch first.
     $tracking_keys = [
@@ -158,22 +162,38 @@ add_action('init', function () {
 });
 
 /**
- * Mirror redirect dimensions into localStorage for browser-side checkout flows.
- * The cookies remain the server-side source of truth for order creation.
+ * Mirror only already-verified redirect dimensions for browser-side checkout
+ * flows. The cookies remain the server-side source of truth for order
+ * creation; unverified request parameters must never reach browser storage.
  */
 add_action('wp_footer', function () {
     if (CP_Attribution_State::is_enabled()) {
         return;
     }
 
+    $touch = isset($GLOBALS['cp_order_attribution_verified_touch']) && is_array($GLOBALS['cp_order_attribution_verified_touch'])
+        ? $GLOBALS['cp_order_attribution_verified_touch']
+        : null;
+    if ($touch === null) {
+        return;
+    }
+
+    $dimensions = [];
+    foreach (['cp_channel_variant', 'cp_placement_label'] as $key) {
+        if (!empty($touch[$key])) {
+            $dimensions[$key] = $touch[$key];
+        }
+    }
+    if (empty($dimensions)) {
+        return;
+    }
+
     ?>
     <script>
     (function () {
-        ['cp_channel_variant', 'cp_placement_label'].forEach(function (key) {
-            var value = new URLSearchParams(window.location.search).get(key);
-            if (!value) {
-                return;
-            }
+        var dimensions = <?php echo wp_json_encode($dimensions); ?>;
+        Object.keys(dimensions).forEach(function (key) {
+            var value = dimensions[key];
 
             try {
                 window.localStorage.setItem(key, value);
@@ -219,13 +239,15 @@ add_action('woocommerce_checkout_create_order', function ($order, $data) {
     $cp_channel_variant = !empty($_COOKIE['cp_channel_variant']) ? sanitize_text_field(wp_unslash($_COOKIE['cp_channel_variant'])) : '';
     $cp_placement_label = !empty($_COOKIE['cp_placement_label']) ? sanitize_text_field(wp_unslash($_COOKIE['cp_placement_label'])) : '';
 
-    if ($cp_from) {
-        $allowed_sources = cp_get_allowed_sources();
-
-        if (in_array($cp_from, $allowed_sources, true)) {
-            $order->update_meta_data('_cp_from', $cp_from);
-        }
+    $allowed_sources = cp_get_allowed_sources();
+    if (!in_array($cp_from, $allowed_sources, true)) {
+        // All legacy dimensions are one trusted touch. Never allow an orphaned
+        // browser cookie, including a dimension from a rejected signature, to
+        // create partial order attribution.
+        return;
     }
+
+    $order->update_meta_data('_cp_from', $cp_from);
 
     if ($cp_slid) {
         $order->update_meta_data('_cp_slid', $cp_slid);

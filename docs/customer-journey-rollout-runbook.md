@@ -1,6 +1,6 @@
 # Customer Journey Attribution Rollout Runbook
 
-Use this runbook after plugin 1.7.5 is installed. It does not authorize a
+Use this runbook after plugin 1.7.7 is installed. It does not authorize a
 production setting change by itself; assign an owner and rollback contact
 before beginning.
 
@@ -63,6 +63,22 @@ Only continue after Step 1 succeeds.
 Uncheck **First/latest touch state** and save. This stops new snapshot writes
 and restores the prior browser-mirroring behavior; it does not delete existing
 snapshot metadata or legacy order metadata.
+
+## Subsequent-touch history (v1.7.7)
+
+Enable this default-off setting only with first/latest state enabled and after
+Analytics history support is verified. Test two distinct signed touches, a
+consecutive duplicate, and more than five later touches. Confirm the initial
+touch stays in first-touch metadata; history retains at most five later touches,
+marks truncation, and ends with the latest snapshot. Confirm order history is
+unchanged by later visits or repeated order capture. Disable the history setting
+to stop new history writes; existing order history is retained.
+
+For v1.7.6 rejection checks, verify unsigned/expired input neither replaces a
+prior accepted touch nor mirrors rejected dimensions into browser storage.
+In a fresh session, rejected input must not create partial order metadata.
+
+See `recovery-2026-10-12.md` for restored-source provenance and test commands.
 
 ## Post-release window
 

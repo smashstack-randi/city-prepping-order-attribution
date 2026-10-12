@@ -34,6 +34,7 @@ final class CP_Order_Attribution_Settings {
             'signature_max_age_seconds' => 900,
             'cookie_lifetime_days' => 30,
             'first_latest_touch_enabled' => false,
+            'subsequent_touch_history_enabled' => false,
             'signing_key_current' => '',
             'signing_key_previous' => '',
         ];
@@ -111,6 +112,7 @@ final class CP_Order_Attribution_Settings {
             'signature_max_age_seconds' => min(max($max_age, 60), DAY_IN_SECONDS),
             'cookie_lifetime_days' => min(max($cookie_lifetime, 1), 365),
             'first_latest_touch_enabled' => !empty($input['first_latest_touch_enabled']),
+            'subsequent_touch_history_enabled' => !empty($input['subsequent_touch_history_enabled']),
             'signing_key_current' => $current['signing_key_current'],
             'signing_key_previous' => $current['signing_key_previous'],
         ];
@@ -185,6 +187,13 @@ final class CP_Order_Attribution_Settings {
                         <td>
                             <label><input name="<?php echo esc_attr(self::OPTION_NAME); ?>[first_latest_touch_enabled]" type="checkbox" value="1" <?php checked(!empty($settings['first_latest_touch_enabled'])); ?> /> Enable server-owned first/latest attribution snapshots</label>
                             <p class="description">Leave disabled until signature enforcement and checkout regression checks have passed. When enabled, first touch is immutable, latest touch remains replaceable, and browser-writable attribution mirroring is disabled.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Subsequent touch history</th>
+                        <td>
+                            <label><input name="<?php echo esc_attr(self::OPTION_NAME); ?>[subsequent_touch_history_enabled]" type="checkbox" value="1" <?php checked(!empty($settings['subsequent_touch_history_enabled'])); ?> /> Retain up to five later verified touches</label>
+                            <p class="description">Requires first/latest touch state. Stores a server-owned, bounded, de-duplicated history on new orders only. Leave disabled until Analytics support and staging validation are complete.</p>
                         </td>
                     </tr>
                     <tr>
