@@ -64,19 +64,23 @@ final class CP_Guide_Submission {
         return null;
     }
 
+    public static function failure_policy() {
+        $policy = defined('CP_GUIDE_CAPTURE_FAILURE_POLICY')
+            ? CP_GUIDE_CAPTURE_FAILURE_POLICY
+            : (CP_Order_Attribution_Settings::get()['guide_capture_failure_policy'] ?? 'continue');
+        // Malformed overrides/settings cannot silently stop capture or enrollment.
+        return in_array($policy, ['continue', 'retry_error'], true) ? $policy : 'continue';
+    }
+
     public static function capture($record, $handler) {
         if (!self::enabled()) { return $record; }
-        // Persistence failure policy is explicit server configuration before activation.
-        // Leave the integration inert until the owner chooses a policy.
-        if (!defined('CP_GUIDE_CAPTURE_FAILURE_POLICY')
-            || !in_array(CP_GUIDE_CAPTURE_FAILURE_POLICY, ['continue', 'retry_error'], true)) { return $record; }
         $event = self::build_event($record, $handler);
         if ($event === null) { return $record; }
         try { $saved = CP_Guide_Outbox::enqueue($event); }
         catch (\Throwable $error) { $saved = false; }
         if (!$saved) {
             self::count_failure();
-            if (CP_GUIDE_CAPTURE_FAILURE_POLICY === 'retry_error') {
+            if (self::failure_policy() === 'retry_error') {
                 $handler->add_error_message('Your submission could not be saved. Please try again.');
                 // Elementor does not recheck errors after actions_before. send() exits
                 // before native actions, preventing Kit enrollment on this failure.

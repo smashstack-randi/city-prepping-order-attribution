@@ -35,6 +35,7 @@ final class CP_Order_Attribution_Settings {
             'cookie_lifetime_days' => 30,
             'first_latest_touch_enabled' => false,
             'subsequent_touch_history_enabled' => false,
+            'guide_capture_failure_policy' => 'continue',
             'signing_key_current' => '',
             'signing_key_previous' => '',
         ];
@@ -106,6 +107,10 @@ final class CP_Order_Attribution_Settings {
 
         $max_age = isset($input['signature_max_age_seconds']) ? absint($input['signature_max_age_seconds']) : 900;
         $cookie_lifetime = isset($input['cookie_lifetime_days']) ? absint($input['cookie_lifetime_days']) : 30;
+        $failure_policy = $input['guide_capture_failure_policy'] ?? $current['guide_capture_failure_policy'];
+        if (!in_array($failure_policy, ['continue', 'retry_error'], true)) {
+            $failure_policy = 'continue';
+        }
 
         $settings = [
             'signature_verification_mode' => $mode,
@@ -113,6 +118,7 @@ final class CP_Order_Attribution_Settings {
             'cookie_lifetime_days' => min(max($cookie_lifetime, 1), 365),
             'first_latest_touch_enabled' => !empty($input['first_latest_touch_enabled']),
             'subsequent_touch_history_enabled' => !empty($input['subsequent_touch_history_enabled']),
+            'guide_capture_failure_policy' => $failure_policy,
             'signing_key_current' => $current['signing_key_current'],
             'signing_key_previous' => $current['signing_key_previous'],
         ];
@@ -156,6 +162,8 @@ final class CP_Order_Attribution_Settings {
         $settings = self::get();
         $current_key_configured = is_string($settings['signing_key_current']) && $settings['signing_key_current'] !== '';
         $previous_key_configured = is_string($settings['signing_key_previous']) && $settings['signing_key_previous'] !== '';
+        $guide_failure_policy = defined('CP_GUIDE_CAPTURE_FAILURE_POLICY') ? CP_GUIDE_CAPTURE_FAILURE_POLICY : $settings['guide_capture_failure_policy'];
+        if (!in_array($guide_failure_policy, ['continue', 'retry_error'], true)) { $guide_failure_policy = 'continue'; }
         ?>
         <div class="wrap">
             <h1>Order Attribution Settings</h1>
@@ -194,6 +202,19 @@ final class CP_Order_Attribution_Settings {
                         <td>
                             <label><input name="<?php echo esc_attr(self::OPTION_NAME); ?>[subsequent_touch_history_enabled]" type="checkbox" value="1" <?php checked(!empty($settings['subsequent_touch_history_enabled'])); ?> /> Retain up to five later verified touches</label>
                             <p class="description">Requires first/latest touch state. Stores a server-owned, bounded, de-duplicated history on new orders only. Leave disabled until Analytics support and staging validation are complete.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><label for="cp-guide-failure-policy">Guide capture failure policy</label></th>
+                        <td>
+                            <select id="cp-guide-failure-policy" name="<?php echo esc_attr(self::OPTION_NAME); ?>[guide_capture_failure_policy]" <?php disabled(defined('CP_GUIDE_CAPTURE_FAILURE_POLICY')); ?>>
+                                <option value="continue" <?php selected($guide_failure_policy, 'continue'); ?>>Continue normal form submission</option>
+                                <option value="retry_error" <?php selected($guide_failure_policy, 'retry_error'); ?>>Show a retryable submission error</option>
+                            </select>
+                            <p class="description">If a guide milestone cannot be saved, continue normal Kit enrollment (default) or stop before enrollment and ask the visitor to retry. Analytics delivery failures after saving are handled by outbox retries. This setting does not enable guide capture.</p>
+                            <?php if (defined('CP_GUIDE_CAPTURE_FAILURE_POLICY')) : ?>
+                                <p class="description">A server configuration override is active. Remove CP_GUIDE_CAPTURE_FAILURE_POLICY from wp-config.php to manage this policy here.</p>
+                            <?php endif; ?>
                         </td>
                     </tr>
                     <tr>

@@ -2,7 +2,8 @@
 /** Guide contract and capture isolation. Run: php tests/guide-submission.php */
 define('ABSPATH', __DIR__ . '/');
 define('CP_GUIDE_CAPTURE_ENABLED', true);
-define('CP_GUIDE_CAPTURE_FAILURE_POLICY', ($argv[1] ?? '') === 'retry_error' ? 'retry_error' : 'continue');
+// Test the admin setting path unless explicitly exercising a server override.
+if (($argv[1] ?? '') === 'override') { define('CP_GUIDE_CAPTURE_FAILURE_POLICY', 'retry_error'); }
 define('CP_GUIDE_EVENT_SCOPE', 'staging');
 $counter = 0;
 $options = [];
@@ -15,6 +16,11 @@ final class CP_Guide_Outbox {
     public static $events = [];
     public static $fail = false;
     public static function enqueue($event) { if (self::$fail) { return false; } self::$events[] = $event; return true; }
+}
+final class CP_Order_Attribution_Settings {
+    public static function get() {
+        return ['guide_capture_failure_policy' => ($GLOBALS['argv'][1] ?? '') === 'retry_error' ? 'retry_error' : 'continue'];
+    }
 }
 final class Guide_Record {
     public $settings = ['id' => '4bec153', 'form_post_id' => 67820, 'form_name' => 'Get started guide'];
@@ -58,7 +64,7 @@ $handler->form['settings']['form_fields'][0]['required'] = '';
 check_guide(CP_Guide_Submission::build_event($record, $handler) === null, 'Saved email field must remain required.');
 $handler->form['settings']['form_fields'][0]['required'] = 'true';
 CP_Guide_Outbox::$fail = true;
-if (CP_GUIDE_CAPTURE_FAILURE_POLICY === 'retry_error') {
+if (CP_Guide_Submission::failure_policy() === 'retry_error') {
     $exited = false;
     try { CP_Guide_Submission::capture($record, $handler); }
     catch (Guide_Exit $exit) { $exited = true; }
