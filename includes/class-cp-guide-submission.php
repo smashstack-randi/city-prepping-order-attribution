@@ -8,7 +8,16 @@ final class CP_Guide_Submission {
     }
 
     public static function enabled() {
-        return defined('CP_GUIDE_CAPTURE_ENABLED') && CP_GUIDE_CAPTURE_ENABLED === true;
+        return self::mode() !== 'disabled';
+    }
+
+    public static function mode() {
+        $mode = CP_Order_Attribution_Settings::get()['guide_capture_mode'] ?? 'disabled';
+        return in_array($mode, ['disabled', 'test_emails_only', 'all'], true) ? $mode : 'disabled';
+    }
+
+    public static function is_test_email($email) {
+        return is_string($email) && preg_match('/^[^@\s]+@cityprepping\.com$/iD', trim($email)) === 1;
     }
 
     public static function form_map() {
@@ -42,6 +51,8 @@ final class CP_Guide_Submission {
                 || ($fields[$field_id]['type'] ?? '') !== 'email') { return null; }
             $email = $fields[$field_id]['value'] ?? null;
             if (!is_string($email) || strlen($email) > 320 || !is_email(trim($email))) { return null; }
+            $is_test_capture = self::mode() === 'test_emails_only';
+            if ($is_test_capture && !self::is_test_email($email)) { return null; }
             if (!is_string($entry['guide_key']) || !preg_match('/^[a-z0-9-]{1,100}$/D', $entry['guide_key'])) { return null; }
             $scope = defined('CP_GUIDE_EVENT_SCOPE') ? CP_GUIDE_EVENT_SCOPE : wp_get_environment_type();
             if (!in_array($scope, ['local', 'development', 'staging', 'production'], true)) { return null; }
@@ -52,6 +63,7 @@ final class CP_Guide_Submission {
                 'scope' => $scope,
                 'submitted_at' => gmdate('Y-m-d\TH:i:s\Z'),
                 'event_type' => 'guide_submission',
+                'is_test_capture' => $is_test_capture,
                 'form' => [
                     'post_id' => (int) $entry['post_id'], 'widget_id' => $entry['widget_id'],
                     'form_key' => $entry['post_id'] . ':' . $entry['widget_id'],

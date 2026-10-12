@@ -36,6 +36,7 @@ final class CP_Order_Attribution_Settings {
             'first_latest_touch_enabled' => false,
             'subsequent_touch_history_enabled' => false,
             'guide_capture_failure_policy' => 'continue',
+            'guide_capture_mode' => 'disabled',
             'signing_key_current' => '',
             'signing_key_previous' => '',
         ];
@@ -111,6 +112,10 @@ final class CP_Order_Attribution_Settings {
         if (!in_array($failure_policy, ['continue', 'retry_error'], true)) {
             $failure_policy = 'continue';
         }
+        $capture_mode = $input['guide_capture_mode'] ?? $current['guide_capture_mode'];
+        if (!in_array($capture_mode, ['disabled', 'test_emails_only', 'all'], true)) {
+            $capture_mode = 'disabled';
+        }
 
         $settings = [
             'signature_verification_mode' => $mode,
@@ -119,6 +124,7 @@ final class CP_Order_Attribution_Settings {
             'first_latest_touch_enabled' => !empty($input['first_latest_touch_enabled']),
             'subsequent_touch_history_enabled' => !empty($input['subsequent_touch_history_enabled']),
             'guide_capture_failure_policy' => $failure_policy,
+            'guide_capture_mode' => $capture_mode,
             'signing_key_current' => $current['signing_key_current'],
             'signing_key_previous' => $current['signing_key_previous'],
         ];
@@ -164,6 +170,8 @@ final class CP_Order_Attribution_Settings {
         $previous_key_configured = is_string($settings['signing_key_previous']) && $settings['signing_key_previous'] !== '';
         $guide_failure_policy = $settings['guide_capture_failure_policy'];
         if (!in_array($guide_failure_policy, ['continue', 'retry_error'], true)) { $guide_failure_policy = 'continue'; }
+        $guide_capture_mode = $settings['guide_capture_mode'];
+        if (!in_array($guide_capture_mode, ['disabled', 'test_emails_only', 'all'], true)) { $guide_capture_mode = 'disabled'; }
         ?>
         <div class="wrap">
             <h1>Order Attribution Settings</h1>
@@ -202,6 +210,17 @@ final class CP_Order_Attribution_Settings {
                         <td>
                             <label><input name="<?php echo esc_attr(self::OPTION_NAME); ?>[subsequent_touch_history_enabled]" type="checkbox" value="1" <?php checked(!empty($settings['subsequent_touch_history_enabled'])); ?> /> Retain up to five later verified touches</label>
                             <p class="description">Requires first/latest touch state. Stores a server-owned, bounded, de-duplicated history on new orders only. Leave disabled until Analytics support and staging validation are complete.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><label for="cp-guide-capture-mode">Guide capture mode</label></th>
+                        <td>
+                            <select id="cp-guide-capture-mode" name="<?php echo esc_attr(self::OPTION_NAME); ?>[guide_capture_mode]">
+                                <option value="disabled" <?php selected($guide_capture_mode, 'disabled'); ?>>Disabled</option>
+                                <option value="test_emails_only" <?php selected($guide_capture_mode, 'test_emails_only'); ?>>Test emails only</option>
+                                <option value="all" <?php selected($guide_capture_mode, 'all'); ?>>All approved form submissions</option>
+                            </select>
+                            <p class="description">Test emails only captures valid @cityprepping.com addresses and marks these guide events as tests. Other visitors keep normal form and Kit behavior without creating milestones. Disabled pauses capture and delivery. Existing purchase attribution is unchanged.</p>
                         </td>
                     </tr>
                     <tr>

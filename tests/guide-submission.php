@@ -1,7 +1,6 @@
 <?php
 /** Guide contract and capture isolation. Run: php tests/guide-submission.php */
 define('ABSPATH', __DIR__ . '/');
-define('CP_GUIDE_CAPTURE_ENABLED', true);
 define('CP_GUIDE_EVENT_SCOPE', 'staging');
 $counter = 0;
 $options = [];
@@ -16,8 +15,9 @@ final class CP_Guide_Outbox {
     public static function enqueue($event) { if (self::$fail) { return false; } self::$events[] = $event; return true; }
 }
 final class CP_Order_Attribution_Settings {
+    public static $mode = 'all';
     public static function get() {
-        return ['guide_capture_failure_policy' => ($GLOBALS['argv'][1] ?? '') === 'retry_error' ? 'retry_error' : 'continue'];
+        return ['guide_capture_mode' => self::$mode, 'guide_capture_failure_policy' => ($GLOBALS['argv'][1] ?? '') === 'retry_error' ? 'retry_error' : 'continue'];
     }
 }
 final class Guide_Record {
@@ -42,7 +42,8 @@ $handler = new Guide_Handler();
 check_guide(CP_Guide_Submission::capture($record, $handler) === $record, 'Filter must return the original record.');
 $event = CP_Guide_Outbox::$events[0];
 check_guide($event['form']['guide_key'] === 'getting-started-guide' && $event['scope'] === 'staging', 'Guide and scope come from server configuration.');
-check_guide(array_keys($event) === ['schema_version', 'signup_event_id', 'source_system', 'scope', 'submitted_at', 'event_type', 'form', 'email'], 'Event contains only the approved milestone contract.');
+check_guide(array_keys($event) === ['schema_version', 'signup_event_id', 'source_system', 'scope', 'submitted_at', 'event_type', 'is_test_capture', 'form', 'email'], 'Event contains only the approved milestone contract.');
+check_guide($event['is_test_capture'] === false, 'All mode does not mark ordinary milestones as tests.');
 check_guide(strpos(json_encode($event), 'forged') === false, 'Browser attribution cannot influence the guide event.');
 CP_Guide_Submission::capture($record, $handler);
 check_guide(CP_Guide_Outbox::$events[1]['signup_event_id'] !== $event['signup_event_id'], 'A distinct request receives a new event ID.');
@@ -61,6 +62,22 @@ $record->fields['email']['value'] = 'test@example.com';
 $handler->form['settings']['form_fields'][0]['required'] = '';
 check_guide(CP_Guide_Submission::build_event($record, $handler) === null, 'Saved email field must remain required.');
 $handler->form['settings']['form_fields'][0]['required'] = 'true';
+CP_Order_Attribution_Settings::$mode = 'test_emails_only';
+$prior_count = count(CP_Guide_Outbox::$events);
+check_guide(CP_Guide_Submission::capture($record, $handler) === $record && count(CP_Guide_Outbox::$events) === $prior_count, 'Test-only skips ordinary visitors before outbox persistence.');
+foreach (['employee@cityprepping.com', ' RANDI@CITYPREPPING.COM ', 'randi+guide-test@cityprepping.com'] as $email) {
+    $record->fields['email']['value'] = $email;
+    $test_event = CP_Guide_Submission::build_event($record, $handler);
+    check_guide($test_event !== null && $test_event['is_test_capture'] === true, 'Test-only accepts valid exact company-domain emails.');
+}
+foreach (['employee@sub.cityprepping.com', 'employee@cityprepping.com.attacker.test', 'employee@notcityprepping.com', 'cityprepping.com@example.com'] as $email) {
+    $record->fields['email']['value'] = $email;
+    check_guide(CP_Guide_Submission::build_event($record, $handler) === null, 'Lookalike and subdomain addresses are not company-domain tests.');
+}
+CP_Order_Attribution_Settings::$mode = 'disabled';
+check_guide(CP_Guide_Submission::capture($record, new stdClass()) === $record, 'Disabled capture never reads the form.');
+CP_Order_Attribution_Settings::$mode = 'all';
+$record->fields['email']['value'] = 'test@example.com';
 CP_Guide_Outbox::$fail = true;
 if (CP_Guide_Submission::failure_policy() === 'retry_error') {
     $exited = false;

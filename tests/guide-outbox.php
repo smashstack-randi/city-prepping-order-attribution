@@ -4,7 +4,7 @@ define('ABSPATH', __DIR__ . '/');
 define('ARRAY_A', 'ARRAY_A');
 define('CP_GUIDE_ANALYTICS_URL', 'https://analytics.example.com/api/wordpress/guide-submissions');
 define('CP_GUIDE_ANALYTICS_SIGNING_KEY', 'test-only-key-never-use-in-production-123');
-$options = ['cp_guide_outbox_schema' => '1'];
+$options = ['cp_guide_outbox_schema' => '2'];
 $scheduled = [];
 $requests = [];
 $responses = [];
@@ -22,7 +22,13 @@ function is_wp_error($value) { return $value === 'wp_error'; }
 function wp_remote_retrieve_response_code($value) { return $value['code']; }
 function wp_remote_retrieve_body($value) { return $value['body']; }
 function wp_safe_remote_post($url, $args) { global $requests, $responses; $requests[] = ['url' => $url, 'args' => $args]; return array_shift($responses); }
-final class CP_Guide_Submission { public static $enabled = true; public static function enabled() { return self::$enabled; } }
+final class CP_Guide_Submission {
+    public static $enabled = true;
+    public static $mode = 'all';
+    public static function enabled() { return self::$enabled; }
+    public static function mode() { return self::$mode; }
+    public static function is_test_email($email) { return is_string($email) && preg_match('/^[^@\s]+@cityprepping\.com$/iD', trim($email)) === 1; }
+}
 final class Outbox_DB {
     public $prefix = 'wp_';
     public $rows = [];
@@ -32,6 +38,7 @@ final class Outbox_DB {
     public function insert($table, $data) { if ($this->fail_insert) { return false; } if (isset($this->rows[$data['event_id']])) { return false; } $this->rows[$data['event_id']] = $data; return 1; }
     public function get_var($sql) {
         foreach ($this->rows as $row) {
+            if (strpos($sql, 'is_test_capture = 1') !== false && empty($row['is_test_capture'])) { continue; }
             if ($row['payload'] !== null && strtotime($row['expires_at']) > time() && $row['attempts'] < 10 && strtotime($row['next_attempt']) <= time()
                 && ($row['state'] === 'pending' || ($row['state'] === 'processing' && strtotime($row['lease_until']) < time()))) { return $row['event_id']; }
         }
@@ -112,4 +119,18 @@ check_outbox(count($requests) === $before && $wpdb->rows[$id]['state'] === 'pend
 $wpdb->rows[$id]['expires_at'] = gmdate('Y-m-d H:i:s', time() - 1);
 CP_Guide_Outbox::process();
 check_outbox($wpdb->rows[$id]['state'] === 'expired' && $wpdb->rows[$id]['payload'] === null, 'Disabled delivery still expires email ciphertext.');
+CP_Guide_Submission::$enabled = true;
+CP_Guide_Submission::$mode = 'test_emails_only';
+$event['signup_event_id'] = wp_generate_uuid4();
+$ordinary_id = $event['signup_event_id'];
+CP_Guide_Outbox::enqueue($event);
+$before = count($requests);
+CP_Guide_Outbox::process();
+check_outbox(count($requests) === $before && $wpdb->rows[$ordinary_id]['attempts'] === 0, 'Test-only pauses existing ordinary rows without consuming retries.');
+$event['signup_event_id'] = wp_generate_uuid4(); $test_id = $event['signup_event_id'];
+$event['email'] = 'employee@cityprepping.com'; $event['is_test_capture'] = true;
+CP_Guide_Outbox::enqueue($event);
+$responses = [['code' => 200, 'body' => json_encode(['signup_event_id' => $test_id, 'status' => 'accepted'])]];
+CP_Guide_Outbox::process();
+check_outbox($wpdb->rows[$test_id]['state'] === 'delivered' && $wpdb->rows[$ordinary_id]['state'] === 'pending', 'Test-only delivers marked company-domain tests without ordinary rows.');
 echo "Guide outbox contract checks passed.\n";

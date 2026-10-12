@@ -17,9 +17,28 @@ first/latest snapshots, campaign dimensions, or confirmed-Kit-subscription claim
 
 ## Configuration (server only)
 
-Set capture and transport constants in deployment configuration. No credential
-is rendered in a form or included in JavaScript. Capture is off unless enabled
-with boolean `true`.
+Set transport constants in deployment configuration. No credential is rendered
+in a form or included in JavaScript.
+
+Since v1.9.0, **Settings → Order Attribution → Guide capture mode** controls
+capture and delivery. It is the sole activation control; legacy
+`CP_GUIDE_CAPTURE_ENABLED` constants are ignored.
+
+- **Disabled** (default): no new captures or delivery; retention cleanup continues.
+- **Test emails only**: only valid addresses at exactly `cityprepping.com` create
+  events. Case-insensitive domain matching excludes subdomains and lookalikes.
+  Other visitors retain normal form and Kit behavior without new outbox rows.
+- **All approved form submissions**: normal capture on the server-approved forms.
+
+Test-only events carry `is_test_capture: true` and are excluded from Analytics
+guide-journey joins. This does not globally classify every company email as a
+test person. For a test purchase that must also be excluded from revenue/orders,
+use the existing `randi+<test>@cityprepping.com` convention. Ordinary company
+addresses may still have independent Kit signup and purchase facts.
+
+Switching All to Test-only also pauses delivery of existing ordinary queued
+events; their retention clock still runs. Switching back to All resumes eligible
+rows. Events captured in Test-only remain marked as tests after any mode change.
 
 Since v1.8.1, set the failure policy under **Settings → Order Attribution → Guide
 capture failure policy**. The default is **Continue normal form submission**.
@@ -28,14 +47,13 @@ persistence fails. This setting does not enable guide capture. The saved admin
 setting is the sole policy source; legacy wp-config.php policy constants are ignored.
 
 ```php
-define('CP_GUIDE_CAPTURE_ENABLED', false);
 define('CP_GUIDE_EVENT_SCOPE', 'staging');
 define('CP_GUIDE_ANALYTICS_URL', 'https://YOUR-ANALYTICS-HOST/api/wordpress/guide-submissions');
 define('CP_GUIDE_ANALYTICS_SIGNING_KEY', 'REPLACE-WITH-A-DEDICATED-SECRET-OF-AT-LEAST-32-CHARACTERS');
 ```
 
-The URL must be public HTTPS without query or fragment. The endpoint path above
-is the proposed Analytics contract, not an already deployed endpoint. Invalid
+The URL must be public HTTPS without query or fragment. Verify Analytics has
+deployed the endpoint and test-marker support before selecting Test-only. Invalid
 delivery configuration pauses sending; queued payloads still expire on schedule.
 Turning capture off pauses new events and network delivery, while existing cron
 continues retention cleanup. WordPress cron needs regular site traffic or a
@@ -55,7 +73,7 @@ Events use schema version 1: `signup_event_id` (server UUID), `source_system`
 (`wordpress`), `scope` (`local`, `development`, `staging`, or `production`),
 UTC `submitted_at`, `event_type` (`guide_submission`), `form` (`post_id`,
 `widget_id`, `form_key`, `guide_key`, `kit_form_id`, `map_version`), and transient
-`email`. Analytics must normalize and HMAC the email without retaining it in
+`email`, and boolean `is_test_capture`. Analytics must normalize and HMAC the email without retaining it in
 identity/reporting tables or ordinary logs, and validate the form/catalog/scope.
 
 The outbox is persisted before any network call. Delivery runs only from cron,
@@ -85,7 +103,8 @@ dedicated signing key distinct from campaign signing and identity HMAC secrets.
 ## Queue, privacy and recovery
 
 The private table is `{$wpdb->prefix}cp_guide_outbox`, created only when capture
-is enabled. Whole event payloads are AES-256-GCM encrypted with a domain-separated
+is enabled. Schema v2 adds a non-PII `is_test_capture` column to restrict worker
+selection; the encrypted event also carries the immutable marker. Whole event payloads are AES-256-GCM encrypted with a domain-separated
 key derived from WordPress auth salts. Operators and database administrators can
 access this operational table; it is not an Analytics reporting table. No
 plaintext email is stored in its columns. WordPress salt rotation invalidates
