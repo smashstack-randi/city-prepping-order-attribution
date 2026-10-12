@@ -24,9 +24,8 @@ with boolean `true`.
 Since v1.8.1, set the failure policy under **Settings → Order Attribution → Guide
 capture failure policy**. The default is **Continue normal form submission**.
 The alternative shows a retryable error before native Kit enrollment if outbox
-persistence fails. This setting does not enable guide capture. An existing
-`CP_GUIDE_CAPTURE_FAILURE_POLICY` constant overrides the dropdown; remove it to
-manage the policy in wp-admin. An active override disables the dropdown.
+persistence fails. This setting does not enable guide capture. The saved admin
+setting is the sole policy source; legacy wp-config.php policy constants are ignored.
 
 ```php
 define('CP_GUIDE_CAPTURE_ENABLED', false);
@@ -114,7 +113,6 @@ php tests/order-attribution.php
 php tests/rejected-attribution.php
 php tests/guide-submission.php
 php tests/guide-submission.php retry_error
-php tests/guide-submission.php override
 php tests/guide-policy-settings.php
 php tests/guide-outbox.php
 php tests/guide-feature-off.php

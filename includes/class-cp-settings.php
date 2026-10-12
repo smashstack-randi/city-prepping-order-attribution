@@ -162,7 +162,7 @@ final class CP_Order_Attribution_Settings {
         $settings = self::get();
         $current_key_configured = is_string($settings['signing_key_current']) && $settings['signing_key_current'] !== '';
         $previous_key_configured = is_string($settings['signing_key_previous']) && $settings['signing_key_previous'] !== '';
-        $guide_failure_policy = defined('CP_GUIDE_CAPTURE_FAILURE_POLICY') ? CP_GUIDE_CAPTURE_FAILURE_POLICY : $settings['guide_capture_failure_policy'];
+        $guide_failure_policy = $settings['guide_capture_failure_policy'];
         if (!in_array($guide_failure_policy, ['continue', 'retry_error'], true)) { $guide_failure_policy = 'continue'; }
         ?>
         <div class="wrap">
@@ -207,14 +207,11 @@ final class CP_Order_Attribution_Settings {
                     <tr>
                         <th scope="row"><label for="cp-guide-failure-policy">Guide capture failure policy</label></th>
                         <td>
-                            <select id="cp-guide-failure-policy" name="<?php echo esc_attr(self::OPTION_NAME); ?>[guide_capture_failure_policy]" <?php disabled(defined('CP_GUIDE_CAPTURE_FAILURE_POLICY')); ?>>
+                            <select id="cp-guide-failure-policy" name="<?php echo esc_attr(self::OPTION_NAME); ?>[guide_capture_failure_policy]">
                                 <option value="continue" <?php selected($guide_failure_policy, 'continue'); ?>>Continue normal form submission</option>
                                 <option value="retry_error" <?php selected($guide_failure_policy, 'retry_error'); ?>>Show a retryable submission error</option>
                             </select>
                             <p class="description">If a guide milestone cannot be saved, continue normal Kit enrollment (default) or stop before enrollment and ask the visitor to retry. Analytics delivery failures after saving are handled by outbox retries. This setting does not enable guide capture.</p>
-                            <?php if (defined('CP_GUIDE_CAPTURE_FAILURE_POLICY')) : ?>
-                                <p class="description">A server configuration override is active. Remove CP_GUIDE_CAPTURE_FAILURE_POLICY from wp-config.php to manage this policy here.</p>
-                            <?php endif; ?>
                         </td>
                     </tr>
                     <tr>

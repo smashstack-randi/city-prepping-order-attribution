@@ -2,8 +2,6 @@
 /** Guide contract and capture isolation. Run: php tests/guide-submission.php */
 define('ABSPATH', __DIR__ . '/');
 define('CP_GUIDE_CAPTURE_ENABLED', true);
-// Test the admin setting path unless explicitly exercising a server override.
-if (($argv[1] ?? '') === 'override') { define('CP_GUIDE_CAPTURE_FAILURE_POLICY', 'retry_error'); }
 define('CP_GUIDE_EVENT_SCOPE', 'staging');
 $counter = 0;
 $options = [];

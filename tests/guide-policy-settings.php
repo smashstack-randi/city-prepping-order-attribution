@@ -24,5 +24,5 @@ $can_manage = false;
 $saved = CP_Order_Attribution_Settings::sanitize_settings(['guide_capture_failure_policy' => 'continue']);
 policy_check($saved['guide_capture_failure_policy'] === 'retry_error', 'Unauthorized saves cannot change policy.');
 define('CP_GUIDE_CAPTURE_FAILURE_POLICY', 'continue');
-policy_check(CP_Guide_Submission::failure_policy() === 'continue', 'Server override takes precedence over admin setting.');
+policy_check(CP_Guide_Submission::failure_policy() === 'retry_error', 'Legacy server constants cannot override the saved admin policy.');
 echo "Guide policy settings checks passed.\n";

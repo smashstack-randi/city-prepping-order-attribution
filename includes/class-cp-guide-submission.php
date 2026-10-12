@@ -65,10 +65,8 @@ final class CP_Guide_Submission {
     }
 
     public static function failure_policy() {
-        $policy = defined('CP_GUIDE_CAPTURE_FAILURE_POLICY')
-            ? CP_GUIDE_CAPTURE_FAILURE_POLICY
-            : (CP_Order_Attribution_Settings::get()['guide_capture_failure_policy'] ?? 'continue');
-        // Malformed overrides/settings cannot silently stop capture or enrollment.
+        $policy = CP_Order_Attribution_Settings::get()['guide_capture_failure_policy'] ?? 'continue';
+        // Malformed settings cannot silently stop capture or enrollment.
         return in_array($policy, ['continue', 'retry_error'], true) ? $policy : 'continue';
     }
 
