@@ -2,7 +2,7 @@
 /**
  * Plugin Name: City Prepping Order Attribution
  * Description: Saves attribution URL params to WooCommerce order meta using last-touch attribution, shows attribution in the order admin, and adds sortable order list columns.
- * Version: 1.9.1
+ * Version: 1.9.2
  */
 
 if (!defined('ABSPATH')) {

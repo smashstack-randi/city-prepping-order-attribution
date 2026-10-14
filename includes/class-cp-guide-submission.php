@@ -23,8 +23,28 @@ final class CP_Guide_Submission {
     public static function form_map() {
         // Overrides are server configuration, never posted form fields.
         return defined('CP_GUIDE_FORM_MAP') ? CP_GUIDE_FORM_MAP : [
+            ['post_id' => 67835, 'widget_id' => '9d63a0d', 'email_field' => 'email', 'form_name' => 'Bugout Guide', 'guide_key' => 'bug-out-bag-guide', 'kit_form_id' => '7489636'],
+            ['post_id' => 67835, 'widget_id' => '684413d', 'email_field' => 'email', 'form_name' => 'Bugout Guide', 'guide_key' => 'bug-out-bag-guide', 'kit_form_id' => '7489636'],
+            ['post_id' => 67838, 'widget_id' => '9d63a0d', 'email_field' => 'email', 'form_name' => 'Cyber Warfare Survival Guide', 'guide_key' => 'cyber-attack-guide', 'kit_form_id' => '7486355'],
+            ['post_id' => 67838, 'widget_id' => '5ae28c0', 'email_field' => 'email', 'form_name' => 'Cyber Warfare Survival Guide', 'guide_key' => 'cyber-attack-guide', 'kit_form_id' => '7486355'],
+            ['post_id' => 67840, 'widget_id' => '9d63a0d', 'email_field' => 'email', 'form_name' => 'Disaster Guide', 'guide_key' => 'disaster-guide', 'kit_form_id' => '7489640'],
+            ['post_id' => 67840, 'widget_id' => '6df1468', 'email_field' => 'email', 'form_name' => 'Disaster Guide', 'guide_key' => 'disaster-guide', 'kit_form_id' => '7489640'],
+            ['post_id' => 67917, 'widget_id' => '9d63a0d', 'email_field' => 'email', 'form_name' => 'Extreme Weather Guide', 'guide_key' => 'extreme-weather-guide', 'kit_form_id' => '7486371'],
+            ['post_id' => 67917, 'widget_id' => '3cd04e7', 'email_field' => 'email', 'form_name' => 'Extreme Weather Guide', 'guide_key' => 'extreme-weather-guide', 'kit_form_id' => '7486371'],
             ['post_id' => 67820, 'widget_id' => '4bec153', 'email_field' => 'email', 'form_name' => 'Get started guide', 'guide_key' => 'getting-started-guide', 'kit_form_id' => '7486364'],
             ['post_id' => 67820, 'widget_id' => 'ef38ef5', 'email_field' => 'email', 'form_name' => 'Get started guide', 'guide_key' => 'getting-started-guide', 'kit_form_id' => '7486364'],
+            ['post_id' => 67893, 'widget_id' => '9d63a0d', 'email_field' => 'email', 'form_name' => 'Physical Fitness Guide', 'guide_key' => 'physical-fitness-guide', 'kit_form_id' => '7634661'],
+            ['post_id' => 67893, 'widget_id' => '5dc1b1a', 'email_field' => 'email', 'form_name' => 'Physical Fitness Guide', 'guide_key' => 'physical-fitness-guide', 'kit_form_id' => '7634661'],
+            ['post_id' => 67898, 'widget_id' => '9d63a0d', 'email_field' => 'email', 'form_name' => 'Recession Proof Guide', 'guide_key' => 'recession-proof-guide', 'kit_form_id' => '7489642'],
+            ['post_id' => 67898, 'widget_id' => 'af0350e', 'email_field' => 'email', 'form_name' => 'Recession Proof Guide', 'guide_key' => 'recession-proof-guide', 'kit_form_id' => '7489642'],
+            ['post_id' => 67911, 'widget_id' => '9d63a0d', 'email_field' => 'email', 'form_name' => 'Risk Matrix Guide', 'guide_key' => 'risk-matrix-guide', 'kit_form_id' => '7486374'],
+            ['post_id' => 67911, 'widget_id' => 'b8665ea', 'email_field' => 'email', 'form_name' => 'Risk Matrix Guide', 'guide_key' => 'risk-matrix-guide', 'kit_form_id' => '7486374'],
+            ['post_id' => 67915, 'widget_id' => '9d63a0d', 'email_field' => 'email', 'form_name' => 'Solar Generator Spreadsheet', 'guide_key' => 'solar-generator-guide', 'kit_form_id' => '7489645'],
+            ['post_id' => 67915, 'widget_id' => 'bceba76', 'email_field' => 'email', 'form_name' => 'Solar Generator Spreadsheet', 'guide_key' => 'solar-generator-guide', 'kit_form_id' => '7489645'],
+            ['post_id' => 75556, 'widget_id' => '9d63a0d', 'email_field' => 'email', 'form_name' => 'Ultimate Food Storage Guide', 'guide_key' => 'ultimate-food-storage-guide', 'kit_form_id' => '9842678'],
+            ['post_id' => 75556, 'widget_id' => 'ba488b6', 'email_field' => 'email', 'form_name' => 'Ultimate Food Storage Guide', 'guide_key' => 'ultimate-food-storage-guide', 'kit_form_id' => '9842678'],
+            ['post_id' => 67920, 'widget_id' => '9d63a0d', 'email_field' => 'email', 'form_name' => 'Water Guide', 'guide_key' => 'water-guide', 'kit_form_id' => '8741827'],
+            ['post_id' => 67920, 'widget_id' => 'b9d3237', 'email_field' => 'email', 'form_name' => 'Water Guide', 'guide_key' => 'water-guide', 'kit_form_id' => '8741827'],
         ];
     }
 
@@ -68,7 +88,7 @@ final class CP_Guide_Submission {
                     'post_id' => (int) $entry['post_id'], 'widget_id' => $entry['widget_id'],
                     'form_key' => $entry['post_id'] . ':' . $entry['widget_id'],
                     'guide_key' => $entry['guide_key'], 'kit_form_id' => (string) $entry['kit_form_id'],
-                    'map_version' => defined('CP_GUIDE_FORM_MAP_VERSION') ? (string) CP_GUIDE_FORM_MAP_VERSION : '1',
+                    'map_version' => defined('CP_GUIDE_FORM_MAP_VERSION') ? (string) CP_GUIDE_FORM_MAP_VERSION : '2',
                 ],
                 'email' => trim($email),
             ];
